@@ -22,174 +22,200 @@
 
 #include "debugconsole.h"
 #include <iostream>
+#include <QApplication>
+#include <QClipboard>
 
 DebugConsole::DebugConsole(QWidget *parent) : QPlainTextEdit(parent),
-  userPrompt(QString("> ")),
-  locked(false),
-  historySkip(false)
+userPrompt(QString("> ")),
+locked(false),
+historySkip(false)
 {
-  historyUp.clear();
-  historyDown.clear();
-  setLineWrapMode(NoWrap);
-  insertPlainText(userPrompt);
+	historyUp.clear();
+	historyDown.clear();
+	setLineWrapMode(NoWrap);
+	insertPlainText(userPrompt);
+
+	textcursor = this->textCursor();
 }
 
 void DebugConsole::keyPressEvent(QKeyEvent *e) {
-  if(locked) return;
+	if (locked) return;
 
+	switch (e->key()) {
+	case Qt::Key_Return:
+	case Qt::Key_Enter:
+		handleEnter();
+		break;
+	case Qt::Key_Backspace:
+		handleLeft(e);
+		break;
+	case Qt::Key_Up:
+		handleHistoryUp();
+		break;
+	case Qt::Key_Down:
+		handleHistoryDown();
+		break;
+	case Qt::Key_Left:
+		handleLeft(e);
+		break;
+	case Qt::Key_Home:
+		handleHome();
+		break;
+	default:
+		QPlainTextEdit::keyPressEvent(e);
+		break;
+	}
 
-  switch(e->key()) {
-  case Qt::Key_Return:
-  case Qt::Key_Enter:
-    handleEnter();
-    break;
-  case Qt::Key_Backspace:
-    handleLeft(e);
-    break;
-  case Qt::Key_Up:
-    handleHistoryUp();
-    break;
-  case Qt::Key_Down:
-    handleHistoryDown();
-    break;
-  case Qt::Key_Left:
-    handleLeft(e);
-    break;
-  case Qt::Key_Home:
-    handleHome();
-    break;
-  default:
-    QPlainTextEdit::keyPressEvent(e);
-    break;
-  }
+	inputPos = this->textCursor().position();
 }
 
 // Enter key pressed
 void DebugConsole::handleEnter() {
-  QString cmd = getCommand();
+	QString cmd = getCommand();
 
-  if(0 < cmd.length()) {
-    while(historyDown.count() > 0) {
-      historyUp.push(historyDown.pop());
-    }
+	if (0 < cmd.length()) {
+		while (historyDown.count() > 0) {
+			historyUp.push(historyDown.pop());
+		}
 
-    historyUp.push(cmd);
-  }
+		historyUp.push(cmd);
+	}
 
-  moveToEndOfLine();
+	moveToEndOfLine();
 
-  if(cmd.length() > 0) {
-    locked = true;
-    setFocus();
-    insertPlainText("\n");
-    emit command(cmd);
-  } else {
-    insertPlainText("\n");
-    insertPlainText(userPrompt);
-    ensureCursorVisible();
-  }
+	if (cmd.length() > 0) {
+		locked = true;
+		setFocus();
+		insertPlainText("\n");
+		emit command(cmd);
+	}
+	else {
+		insertPlainText("\n");
+		insertPlainText(userPrompt);
+		ensureCursorVisible();
+	}
 }
 
 void DebugConsole::result(QString result) {
-  insertPlainText(result);
-  insertPlainText("\n");
-  insertPlainText(userPrompt);
-  ensureCursorVisible();
-  locked = false;
+	insertPlainText(result);
+	insertPlainText("\n");
+	insertPlainText(userPrompt);
+	ensureCursorVisible();
+	locked = false;
 }
 
-// Append line but do not display prompt afterwards
 void DebugConsole::append(QString text) {
-  insertPlainText(text);
-  ensureCursorVisible();
+	insertPlainText(text);
+	ensureCursorVisible();
 }
 
 void DebugConsole::replace(QString text)
 {
-    QTextCursor c = this->textCursor();
-    c.movePosition(QTextCursor::StartOfLine);
-    c.select(QTextCursor::LineUnderCursor);
-    c.removeSelectedText();
-    append(text);
+	QTextCursor c = this->textCursor();
+	c.movePosition(QTextCursor::StartOfLine);
+	c.select(QTextCursor::LineUnderCursor);
+	c.removeSelectedText();
+	append(text);
 }
 
 void DebugConsole::handleHistoryUp() {
-  if(0 < historyUp.count()) {
-    QString cmd = historyUp.pop();
-    historyDown.push(cmd);
+	if (0 < historyUp.count()) {
+		QString cmd = historyUp.pop();
+		historyDown.push(cmd);
 
-    clearLine();
-    insertPlainText(cmd);
-  }
+		clearLine();
+		insertPlainText(cmd);
+	}
 
-  historySkip = true;
+	historySkip = true;
 }
 
 void DebugConsole::handleHistoryDown() {
-  if(0 < historyDown.count() && historySkip) {
-    historyUp.push(historyDown.pop());
-    historySkip = false;
-  }
+	if (0 < historyDown.count() && historySkip) {
+		historyUp.push(historyDown.pop());
+		historySkip = false;
+	}
 
-  if(0 < historyDown.count()) {
-    QString cmd = historyDown.pop();
-    historyUp.push(cmd);
+	if (0 < historyDown.count()) {
+		QString cmd = historyDown.pop();
+		historyUp.push(cmd);
 
-    clearLine();
-    insertPlainText(cmd);
-  } else {
-    clearLine();
-  }
+		clearLine();
+		insertPlainText(cmd);
+	}
+	else {
+		clearLine();
+	}
 }
 
 void DebugConsole::clearLine() {
-  QTextCursor c = this->textCursor();
-  c.select(QTextCursor::LineUnderCursor);
-  c.removeSelectedText();
-  this->insertPlainText(userPrompt);
+	QTextCursor c = this->textCursor();
+	c.select(QTextCursor::LineUnderCursor);
+	c.removeSelectedText();
+	this->insertPlainText(userPrompt);
 }
 
 QString DebugConsole::getCommand() const {
-  QTextCursor c = this->textCursor();
-  c.select(QTextCursor::LineUnderCursor);
+	QTextCursor c = this->textCursor();
+	c.select(QTextCursor::LineUnderCursor);
 
-  QString text = c.selectedText();
-  text.remove(0, userPrompt.length());
+	QString text = c.selectedText();
+	text.remove(0, userPrompt.length());
 
-  return text;
+	return text;
 }
 
 void DebugConsole::moveToEndOfLine() {
-  QPlainTextEdit::moveCursor(QTextCursor::EndOfLine);
+	QPlainTextEdit::moveCursor(QTextCursor::EndOfLine);
 }
 
 void DebugConsole::handleLeft(QKeyEvent *event) {
-  if(getIndex(textCursor()) > userPrompt.length()) {
-    QPlainTextEdit::keyPressEvent(event);
-  }
+	if (getIndex(textCursor()) > userPrompt.length()) {
+		QPlainTextEdit::keyPressEvent(event);
+	}
 }
 
 void DebugConsole::handleHome() {
-  QTextCursor c = textCursor();
-  c.movePosition(QTextCursor::StartOfLine);
-  c.movePosition(QTextCursor::Right, QTextCursor::MoveAnchor, userPrompt.length());
-  setTextCursor(c);
+	QTextCursor c = textCursor();
+	c.movePosition(QTextCursor::StartOfLine);
+	c.movePosition(QTextCursor::Right, QTextCursor::MoveAnchor, userPrompt.length());
+	setTextCursor(c);
 }
 
-int DebugConsole::getIndex (const QTextCursor &crQTextCursor ) {
-  QTextBlock b;
-  int column = 1;
-  b = crQTextCursor.block();
-  column = crQTextCursor.position() - b.position();
-  return column;
+int DebugConsole::getIndex(const QTextCursor &crQTextCursor) {
+	QTextBlock b;
+	int column = 1;
+	b = crQTextCursor.block();
+	column = crQTextCursor.position() - b.position();
+	return column;
 }
 
 void DebugConsole::setPrompt(const QString &prompt) {
-  userPrompt = prompt;
-  clearLine();
-  locked = false;
+	userPrompt = prompt;
+	clearLine();
+	locked = false;
 }
 
 QString DebugConsole::prompt() const {
-  return userPrompt;
+	return userPrompt;
+}
+
+void DebugConsole::mousePressEvent(QMouseEvent *event)
+{
+	QPlainTextEdit::mousePressEvent(event);
+}
+
+void DebugConsole::mouseReleaseEvent(QMouseEvent *)
+{
+	QString str=textCursor().selectedText();
+	QClipboard *clipboard = QApplication::clipboard();
+	clipboard->setText(str);
+
+	textcursor.setPosition(inputPos);
+	setTextCursor(textcursor);
+}
+
+void DebugConsole::mouseMoveEvent(QMouseEvent *event)
+{
+	QPlainTextEdit::mouseMoveEvent(event);
 }

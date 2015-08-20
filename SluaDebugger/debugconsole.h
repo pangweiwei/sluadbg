@@ -43,10 +43,10 @@ public:
 protected:
   void keyPressEvent(QKeyEvent *e);
 
-  void mousePressEvent(QMouseEvent *)       { /* Ignore */ }
+  void mousePressEvent(QMouseEvent *);
   void mouseDoubleClickEvent(QMouseEvent *) { /* Ignore */ }
-  void mouseMoveEvent(QMouseEvent *)        { /* Ignore */ }
-  void mouseReleaseEvent(QMouseEvent *)     { /* Ignore */ }
+  void mouseMoveEvent(QMouseEvent *);
+  void mouseReleaseEvent(QMouseEvent *);
 
 private:
   void handleLeft(QKeyEvent *event);
@@ -61,10 +61,12 @@ private:
 
   int getIndex (const QTextCursor &crQTextCursor );
 
+  QTextCursor textcursor;
   QString userPrompt;
   QStack<QString> historyUp;
   QStack<QString> historyDown;
   bool locked, historySkip;
+  int inputPos=0;
 
 signals:
   void command(QString command);
