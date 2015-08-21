@@ -101,6 +101,7 @@ void MainWindow::onRecv()
             socket->read(bytes,packageLen);
             bytes[packageLen]='\0';
             QString str(bytes);
+			delete[] bytes;
 
             if(str.startsWith("$(")) {
                 onCommand(str.trimmed());
