@@ -25,6 +25,7 @@
 #include "dialogconnect.h"
 #include <QDebug>
 #include <QHostAddress>
+#include <QRegExp>
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -64,35 +65,63 @@ void MainWindow::onClear()
 	result();
 }
 
+
+void MainWindow::sendCmd(QString cmd) {
+	std::string str = cmd.toStdString();
+	quint32 len = (quint32)str.size();
+	socket->write((const char*)&len, sizeof(quint32));
+	socket->write(str.data(), str.size());
+	socket->flush();
+}
+
+bool isControlCode(QString cmd,QString& code) {
+	static QRegExp codeExp("\\$\\((\\w+)\\)");
+	if (codeExp.indexIn(cmd) >= 0) {
+		code = codeExp.cap(1);
+		return true;
+	}
+	return false;
+}
+
+void MainWindow::cmdPrompt() {
+	ui->plainTextEdit->setPrompt("Slua> ");
+}
+
+void MainWindow::cmdPromptDebug() {
+	ui->plainTextEdit->setPrompt("Debug> ");
+}
+
+void MainWindow::cmdConnected()
+{
+	replace("Host connected\n");
+	result("Type start to continue game\n");
+}
+
 void MainWindow::onCommand(QString cmd)
 {
-    if(cmd=="$(Prompt)") {
-        ui->plainTextEdit->setPrompt("Slua> ");
-    }
-    else if(cmd=="$(PromptDebug)") {
-        ui->plainTextEdit->setPrompt("Debug> ");
-    }
-    else {
-        if(socket && socket->isOpen()) {
-            cmd+="\n";
-            std::string str = cmd.toStdString();
-            quint16 len = (quint16)str.size();
-            socket->write((const char*)&len,sizeof(quint16));
-            socket->write(str.data(),str.size());
-			socket->flush();
-        }
-        else
-            error("Host not conncted");
-    }
+	if (socket && socket->isOpen()) {
+		if (cmd == "start")
+			sendCmd("$(Start)");
+		else
+			sendCmd(cmd);
+	}
+	else
+		error("Host not conncted");
+}
+
+
+void MainWindow::onControlCode(QString code) {
+	code = "cmd" + code;
+	QMetaObject::invokeMethod(this, code.toUtf8().data());
 }
 
 void MainWindow::onRecv()
 {
     while(true) {
 
-        if(packageLen==0 && socket->bytesAvailable()>=sizeof(quint16))
+        if(packageLen==0 && socket->bytesAvailable()>=sizeof(quint32))
         {
-            socket->read((char*)&packageLen,sizeof(quint16));
+            socket->read((char*)&packageLen,sizeof(quint32));
         }
 
         if(packageLen>0 && socket->bytesAvailable()>=packageLen) {
@@ -101,10 +130,10 @@ void MainWindow::onRecv()
             socket->read(bytes,packageLen);
             bytes[packageLen]='\0';
             QString str(bytes);
-			delete[] bytes;
 
-            if(str.startsWith("$(")) {
-                onCommand(str.trimmed());
+			QString code;
+            if(isControlCode(str,code)) {
+				onControlCode(code);
             }
             else
             {
@@ -112,6 +141,7 @@ void MainWindow::onRecv()
 				result();
             }
 
+			delete[] bytes;
             packageLen=0;
         }
         else
@@ -171,3 +201,5 @@ void MainWindow::closeEvent(QCloseEvent *)
 	if (socket)
 		socket->disconnectFromHost();
 }
+
+
