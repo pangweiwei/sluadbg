@@ -55,7 +55,7 @@ private slots:
 
 private:
     Ui::MainWindow *ui;
-    QTcpSocket* socket=nullptr;
+    QTcpSocket* socket=NULL;
     int packageLen=0;
 	QString prompt;
 

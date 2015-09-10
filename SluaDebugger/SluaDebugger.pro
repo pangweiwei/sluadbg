@@ -14,12 +14,12 @@ TEMPLATE = app
 
 SOURCES += main.cpp\
         mainwindow.cpp \
-    ReplWidget.cpp \
-    dialogconnect.cpp
+    dialogconnect.cpp \
+    debugconsole.cpp
 
 HEADERS  += mainwindow.h \
-    ReplWidget.h \
-    dialogconnect.h
+    dialogconnect.h \
+    debugconsole.h
 
 FORMS    += mainwindow.ui \
     dialogconnect.ui
