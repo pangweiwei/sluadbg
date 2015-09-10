@@ -73,7 +73,6 @@ signals:
 
 public slots:
   void result(QString result);
-  void append(QString text);
   void replace(QString text);
 };
 

@@ -102,11 +102,7 @@ void DebugConsole::result(QString result) {
 	insertPlainText(userPrompt);
 	ensureCursorVisible();
 	locked = false;
-}
-
-void DebugConsole::append(QString text) {
-	insertPlainText(text);
-	ensureCursorVisible();
+	inputPos = this->textCursor().position();
 }
 
 void DebugConsole::replace(QString text)
