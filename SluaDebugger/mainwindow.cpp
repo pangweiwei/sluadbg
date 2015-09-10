@@ -78,15 +78,6 @@ void MainWindow::sendCmd(QString cmd) {
 	socket->flush();
 }
 
-bool isControlCode(QString cmd,QString& code) {
-	static QRegExp codeExp("\\$\\((\\w+)\\)");
-	if (codeExp.indexIn(cmd) >= 0) {
-		code = codeExp.cap(1);
-		return true;
-	}
-	return false;
-}
-
 void MainWindow::cmdprompt(QString prompt) {
 	this->prompt = prompt;
 }
