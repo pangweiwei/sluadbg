@@ -115,7 +115,7 @@ void DebugConsole::replace(QString text)
 	c.movePosition(QTextCursor::StartOfLine);
 	c.select(QTextCursor::LineUnderCursor);
 	c.removeSelectedText();
-	append(text);
+	result(text);
 }
 
 void DebugConsole::handleHistoryUp() {

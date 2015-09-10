@@ -47,14 +47,17 @@ private slots:
     void onDisconnected();
     void onSocketError(QAbstractSocket::SocketError err);
 
-	void cmdConnected();
-	void cmdPrompt();
-	void cmdPromptDebug();
+	void cmdprompt(QString prompt);
+	void cmdprint(QString str);
+	void cmdret(QString str);
+	void cmdbreak(QString str);
+	void cmdresume(QString str);
 
 private:
     Ui::MainWindow *ui;
     QTcpSocket* socket=nullptr;
-    quint16 packageLen=0;
+    int packageLen=0;
+	QString prompt;
 
     void error(QString err);
     void doConnect(QString ip,quint16);
@@ -62,7 +65,8 @@ private:
     void replace(QString str);
     void result(QString str="");
 	void sendCmd(QString cmd);
-	void onControlCode(QString);
+
+	void doCommand(QString str);
 protected:
 	void closeEvent(QCloseEvent *) override;
 

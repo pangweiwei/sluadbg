@@ -27,6 +27,10 @@
 #include <QHostAddress>
 #include <QRegExp>
 
+
+#define PROMPT1 "slua> "
+#define PROMPT2 "ldb> "
+
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
@@ -83,37 +87,19 @@ bool isControlCode(QString cmd,QString& code) {
 	return false;
 }
 
-void MainWindow::cmdPrompt() {
-	ui->plainTextEdit->setPrompt("Slua> ");
-}
-
-void MainWindow::cmdPromptDebug() {
-	ui->plainTextEdit->setPrompt("Debug> ");
-}
-
-void MainWindow::cmdConnected()
-{
-	replace("Host connected\n");
-	result("Type start to continue game\n");
+void MainWindow::cmdprompt(QString prompt) {
+	this->prompt = prompt;
 }
 
 void MainWindow::onCommand(QString cmd)
 {
 	if (socket && socket->isOpen()) {
-		if (cmd == "start")
-			sendCmd("$(Start)");
-		else
-			sendCmd(cmd);
+		sendCmd(cmd);
 	}
 	else
 		error("Host not conncted");
 }
 
-
-void MainWindow::onControlCode(QString code) {
-	code = "cmd" + code;
-	QMetaObject::invokeMethod(this, code.toUtf8().data());
-}
 
 void MainWindow::onRecv()
 {
@@ -121,7 +107,7 @@ void MainWindow::onRecv()
 
         if(packageLen==0 && socket->bytesAvailable()>=sizeof(quint32))
         {
-            socket->read((char*)&packageLen,sizeof(quint32));
+            socket->read((char*)&packageLen,sizeof(int));
         }
 
         if(packageLen>0 && socket->bytesAvailable()>=packageLen) {
@@ -129,18 +115,8 @@ void MainWindow::onRecv()
             char* bytes = new char[packageLen+1];
             socket->read(bytes,packageLen);
             bytes[packageLen]='\0';
-            QString str(bytes);
-
-			QString code;
-            if(isControlCode(str,code)) {
-				onControlCode(code);
-            }
-            else
-            {
-                replace(bytes);
-				result();
-            }
-
+			QString str(bytes);
+			doCommand(str);
 			delete[] bytes;
             packageLen=0;
         }
@@ -151,12 +127,16 @@ void MainWindow::onRecv()
 
 void MainWindow::onConnected()
 {
-    qDebug() << "conncted";
+	replace("Host connected");
+	replace("Type start to continue game");
+	cmdprompt(PROMPT1);
+	result("");
 }
 
 void MainWindow::onDisconnected()
 {
-    qDebug() << "disconncted";
+	replace("Bye");
+	cmdprompt("> ");
 }
 
 void MainWindow::onSocketError(QAbstractSocket::SocketError err)
@@ -193,13 +173,56 @@ void MainWindow::replace(QString str)
 
 void MainWindow::result(QString str)
 {
-    ui->plainTextEdit->result(str);
+	if (str.isEmpty())
+		ui->plainTextEdit->setPrompt(prompt);
+	else
+		ui->plainTextEdit->result(str);
 }
 
 void MainWindow::closeEvent(QCloseEvent *)
 {
 	if (socket)
 		socket->disconnectFromHost();
+}
+
+void MainWindow::doCommand(QString str)
+{
+	int i=str.indexOf(" ");
+	QString cmd=str.mid(0, i);
+	cmd = "cmd" + cmd;
+	QString remain;
+	if (i>0) remain = str.mid(i + 1);
+	QMetaObject::invokeMethod(this, cmd.toUtf8().data(), Q_ARG(QString,remain));
+}
+
+void MainWindow::cmdprint(QString str)
+{
+	result(str);
+}
+
+void MainWindow::cmdret(QString str)
+{
+	if (str != "ok")
+	{
+		result(str);
+	}
+	else {
+		result("");
+	}
+}
+
+void MainWindow::cmdbreak(QString str)
+{
+	cmdprompt(PROMPT2);
+	QStringList args=str.split(',');
+	replace(QString::asprintf("Break at %s:%s", args[0].toUtf8().data(), args[1].toUtf8().data()));
+	result("");
+}
+
+void MainWindow::cmdresume(QString str)
+{
+	cmdprompt(PROMPT1);
+	result("");
 }
 
 
