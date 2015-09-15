@@ -182,6 +182,8 @@ void MainWindow::closeEvent(QCloseEvent *)
 {
 	if (socket)
 	{
+		sendCmd("quit");
+		socket->waitForBytesWritten();
 		socket->disconnectFromHost();
 		delete socket;
 	}
