@@ -28,6 +28,7 @@
 #include <QRegExp>
 
 
+#define PROMPT0 "> "
 #define PROMPT1 "slua> "
 #define PROMPT2 "ldb> "
 
@@ -122,12 +123,17 @@ void MainWindow::onConnected()
 	replace("Type start to continue game");
 	cmdprompt(PROMPT1);
 	result("");
+
+	ui->actionConnect->setDisabled(true);
 }
 
 void MainWindow::onDisconnected()
 {
+	cmdprompt(PROMPT0);
 	replace("Bye");
-	cmdprompt("> ");
+	result();
+	
+	ui->actionConnect->setDisabled(false);
 }
 
 void MainWindow::onSocketError(QAbstractSocket::SocketError err)
@@ -145,7 +151,9 @@ void MainWindow::error(QString err)
 
 void MainWindow::doConnect(QString ip,quint16 port)
 {
-    socket = new QTcpSocket();
+	closeEvent(nullptr);
+
+	socket = new QTcpSocket();
 
     QObject::connect(socket,&QTcpSocket::readyRead,this,&MainWindow::onRecv);
     QObject::connect(socket,SIGNAL(error(QAbstractSocket::SocketError)),
@@ -173,7 +181,11 @@ void MainWindow::result(QString str)
 void MainWindow::closeEvent(QCloseEvent *)
 {
 	if (socket)
+	{
 		socket->disconnectFromHost();
+		delete socket;
+	}
+
 }
 
 void MainWindow::doCommand(QString str)
@@ -215,5 +227,4 @@ void MainWindow::cmdresume(QString str)
 	cmdprompt(PROMPT1);
 	result("");
 }
-
 
