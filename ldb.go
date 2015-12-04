@@ -156,7 +156,7 @@ func main() {
 
 	prompt="slua> "
 
-	conn,err:=net.Dial("tcp","localhost:10240")
+	conn,err:=net.Dial("tcp",fmt.Sprintf("%s:%d",*hostptr,*portptr))
 	if err!=nil {
 		fmt.Println(err)
 		return
